@@ -17,6 +17,11 @@
     "koa-router": "^9.1.0"
   },
   "devDependencies": {
+    "@types/dotenv": "^8.2.0",
+    "@types/koa": "^2.13.4",
+    "@types/koa-router": "^7.4.4",
+    "ts-node": "^10.2.1",
+    "typescript": "^4.4.3",
     "yarn": "^1.22.11"
   }
 }
