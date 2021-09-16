@@ -83,7 +83,8 @@ router.get('/redirect/:id', async (ctx, next) => {
 			console.log(raw)
 			ctx.response.body = '認証が完了しました。閉じてもらって構いません。'
 		}
-	} catch {
+	} catch (e) {
+		console.log(e)
 		ctx.response.body = '認証に失敗しました。鯖缶(モデレータ以上)か確認してください。'
 	}
 })
@@ -116,7 +117,7 @@ koa.listen(4001, () => {
 })
 async function getToken() {
 	const auth = createAppAuth({
-		id: appId,
+		appId: appId,
 		privateKey: fs.readFileSync(keyFile),
 		installationId: integId,
 	})
