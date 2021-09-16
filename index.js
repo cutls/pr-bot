@@ -90,7 +90,7 @@ router.get('/redirect/:id', async (ctx, next) => {
 })
 router.post('/webhook', koaBody(), async (ctx, next) => {
 	const token = await getToken()
-	if (ctx.request.body.action == 'opened') {
+	if (ctx.request.body.action == 'opened' || ctx.request.body.action == 'reopened') {
 		const id = ctx.request.body.number
 		const raw = await axios.post(
 			`https://api.github.com/repos/${repo}/issues/${id}/comments`,
