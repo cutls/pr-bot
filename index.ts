@@ -19,6 +19,11 @@ router.get('/pr/:id', async (ctx, next) => {
 	try {
 		const title = await getPRTitle(id)
 		if (title.match(/^(.*\.)+[a-zA-Z]{2,}$/)) {
+			const firstCheck = await hasRightsToChange(id, title)
+			if (!firstCheck) {
+				ctx.response.body = 'あなたの編集できるファイルの範囲を超えています。'
+				return false
+			}
 			const res = await axios.post(`https://${title}/api/v1/apps`, {
 				scopes: 'admin:read',
 				redirect_uris: `${host}/redirect/${id}`,
@@ -43,6 +48,11 @@ router.get('/pr/:id/misskey', async (ctx, next) => {
 	try {
 		const title = await getPRTitle(id)
 		if (title.match(/^(.*\.)+[a-zA-Z]{2,}$/)) {
+			const firstCheck = await hasRightsToChange(id, title)
+			if (!firstCheck) {
+				ctx.response.body = 'あなたの編集できるファイルの範囲を超えています。'
+				return false
+			}
 			const res = await axios.post(`https://${title}/api/app/create`, {
 				name: appName,
 				description: appName,
@@ -81,17 +91,54 @@ async function getPRTitle(id: string) {
 			},
 		})
 		const json = raw.data
+
 		const title = json.title
 		return title
 	} catch (e) {
 		console.error(e)
 	}
 }
+async function hasRightsToChange(id: string, title: string) {
+	let firstLetter = title.substr(0, 1)
+	if (firstLetter.match(/[0-9]/)) firstLetter = '0'
+	try {
+		const token = await getToken()
+		const raw = await axios.get(`https://api.github.com/repos/${repo}/pulls/${id}/commits`, {
+			headers: {
+				Authorization: `Token ${token}`,
+			},
+		})
+		const json = raw.data
+		let permited = true
+		for (const commit of json) {
+			const { url } = commit
+			const raw = await axios.get(url, {
+				headers: {
+					Authorization: `Token ${token}`,
+				},
+			})
+			const files = raw.data.files
+			for (const file of files) {
+				const fileName = file.filename
+				console.log(fileName, `resources/${firstLetter}/${title}/data.json5`)
+				if (fileName !== `resources/${firstLetter}/${title}/data.json5`) {
+					permited = false
+					break
+				}
+			}
+			if (!permited) break
+		}
+		return permited
+	} catch (e) {
+		console.error(e)
+		return false
+	}
+}
 router.get('/redirect/:id', async (ctx, next) => {
 	const idP = ctx.params.id
 	const { code, id, state } = ctx.query
 	const arr = typeof state === 'string' ? state.split(',') : null
-	if(!arr) return ctx.response.body = 'Error'
+	if (!arr) return ctx.response.body = 'Error'
 	const res = await axios.post(`https://${arr[0]}/oauth/token`, {
 		grant_type: 'authorization_code',
 		redirect_uri: `${host}/redirect/${id}`,
@@ -138,7 +185,7 @@ router.get('/redirect/:id/misskey', async (ctx, next) => {
 			if (!res) throw ('Error')
 			ctx.response.body = '認証が完了しました。閉じてもらって構いません。'
 		} else {
-			throw('Error')
+			throw ('Error')
 		}
 	} catch (e) {
 		console.log(e)
@@ -194,7 +241,7 @@ koa.listen(4001, () => {
 	console.log('Server started!!')
 })
 async function getToken() {
-	if(!appId || !keyFile) return null
+	if (!appId || !keyFile) return null
 	const auth = createAppAuth({
 		appId,
 		privateKey: fs.readFileSync(keyFile).toString(),
