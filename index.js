@@ -72,7 +72,7 @@ router.get('/redirect/:id', async (ctx, next) => {
 			const raw = await axios.post(
 				`https://api.github.com/repos/${repo}/issues/${id}/labels`,
 				{
-					labels: 'verified',
+					labels: ['verified'],
 				},
 				{
 					headers: {
