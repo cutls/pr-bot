@@ -27,12 +27,12 @@ router.get('/pr/:id/mastodon', async (ctx, next) => {
 			}
 			const res = await axios.post(`https://${title}/api/v1/apps`, {
 				scopes: 'admin:read',
-				redirect_uris: `${host}/redirect/${id}`,
+				redirect_uris: `${host}/redirect/${id}/mastodon`,
 				client_name: appName,
 			})
-			const authUrl = `https://${title}/oauth/authorize?client_id=${res.data.client_id}&client_secret=${res.data.client_secret}&response_type=code&scope=admin:read&redirect_uri=${encodeURIComponent(
-				`${host}/redirect/${id}/mastodon`
-			)}&state=${title},${res.data.client_id},${res.data.client_secret}`
+			const authUrl = `https://${title}/oauth/authorize?client_id=${res.data.client_id}&client_secret=${
+				res.data.client_secret
+			}&response_type=code&scope=admin:read&redirect_uri=${encodeURIComponent(`${host}/redirect/${id}/mastodon`)}&state=${title},${res.data.client_id},${res.data.client_secret}`
 			ctx.redirect(authUrl)
 		} else {
 			ctx.response.body = {
@@ -59,11 +59,11 @@ router.get('/pr/:id/misskey', async (ctx, next) => {
 				name: appName,
 				description: appName,
 				permission: ['read:account'],
-				callbackUrl: `${host}/redirect/${id}/misskey`
+				callbackUrl: `${host}/redirect/${id}/misskey`,
 			})
 			const appSecret = res.data.secret
 			const session = await axios.post(`https://${title}/api/auth/session/generate`, {
-				appSecret
+				appSecret,
 			})
 			const authUrl = session.data.url
 			ctx.cookies.set('token', session.data.token)
@@ -141,16 +141,18 @@ router.get('/redirect/:id/mastodon', async (ctx, next) => {
 	const idP = ctx.params.id
 	const { code, id, state } = ctx.query
 	const arr = typeof state === 'string' ? state.split(',') : null
-	if (!arr) return ctx.response.body = 'Error'
-	const res = await axios.post(`https://${arr[0]}/oauth/token`, {
-		grant_type: 'authorization_code',
-		redirect_uri: `${host}/redirect/${id}`,
-		client_id: arr[1],
-		client_secret: arr[2],
-		code: code,
-	})
-	const at = res.data.access_token
+	if (!arr) return (ctx.response.body = 'Error')
+
 	try {
+		console.log(`${host}/redirect/${idP}/mastodon`, arr, code)
+		const res = await axios.post(`https://${arr[0]}/oauth/token`, {
+			grant_type: 'authorization_code',
+			redirect_uri: `${host}/redirect/${idP}/mastodon`,
+			client_id: arr[1],
+			client_secret: arr[2],
+			code: code,
+		})
+		const at = res.data.access_token
 		const mod = await axios.get(`https://${arr[0]}/api/v1/admin/accounts`, {
 			headers: {
 				Authorization: `Bearer ${at}`,
@@ -160,7 +162,7 @@ router.get('/redirect/:id/mastodon', async (ctx, next) => {
 		if (mod.status == 200) verified = true
 		if (verified) {
 			const res = await setLabel(idP)
-			if (!res) throw ('Error')
+			if (!res) throw 'Error'
 			ctx.response.body = '認証が完了しました。閉じてもらって構いません。'
 		}
 	} catch (e) {
@@ -180,16 +182,16 @@ router.get('/redirect/:id/misskey', async (ctx, next) => {
 		ctx.cookies.set('domain', '')
 		const res = await axios.post(`https://${domain}/api/auth/session/userkey`, {
 			appSecret,
-			token: ctx.query.token
+			token: ctx.query.token,
 		})
 		const user = res.data.user
 		const verified = user.isAdmin || user.isModerator
 		if (verified) {
 			const res = await setLabel(id)
-			if (!res) throw ('Error')
+			if (!res) throw 'Error'
 			ctx.response.body = '認証が完了しました。閉じてもらって構いません。'
 		} else {
-			throw ('Error')
+			throw 'Error'
 		}
 	} catch (e) {
 		console.log(e)
@@ -215,7 +217,6 @@ async function setLabel(id: string) {
 		console.log(e)
 		return false
 	}
-
 }
 router.post('/webhook', koaBody(), async (ctx, next) => {
 	const token = await getToken()

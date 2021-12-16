@@ -2,3 +2,5 @@ key.pem
 node_modules
 .env
 data.json
+*.bat
+dist
