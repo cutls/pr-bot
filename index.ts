@@ -14,7 +14,8 @@ const appName = process.env.APP_NAME
 
 const router = new Router()
 const koa = new Koa()
-router.get('/pr/:id', async (ctx, next) => {
+router.get('/pr/:id/mastodon', async (ctx, next) => {
+	console.log('mastodon')
 	const id = ctx.params.id
 	try {
 		const title = await getPRTitle(id)
@@ -30,7 +31,7 @@ router.get('/pr/:id', async (ctx, next) => {
 				client_name: appName,
 			})
 			const authUrl = `https://${title}/oauth/authorize?client_id=${res.data.client_id}&client_secret=${res.data.client_secret}&response_type=code&scope=admin:read&redirect_uri=${encodeURIComponent(
-				`${host}/redirect/${id}`
+				`${host}/redirect/${id}/mastodon`
 			)}&state=${title},${res.data.client_id},${res.data.client_secret}`
 			ctx.redirect(authUrl)
 		} else {
@@ -44,6 +45,7 @@ router.get('/pr/:id', async (ctx, next) => {
 	}
 })
 router.get('/pr/:id/misskey', async (ctx, next) => {
+	console.log('misskey')
 	const id = ctx.params.id
 	try {
 		const title = await getPRTitle(id)
@@ -134,7 +136,8 @@ async function hasRightsToChange(id: string, title: string) {
 		return false
 	}
 }
-router.get('/redirect/:id', async (ctx, next) => {
+router.get('/redirect/:id/mastodon', async (ctx, next) => {
+	console.log('mastodonRedirect')
 	const idP = ctx.params.id
 	const { code, id, state } = ctx.query
 	const arr = typeof state === 'string' ? state.split(',') : null
@@ -166,6 +169,7 @@ router.get('/redirect/:id', async (ctx, next) => {
 	}
 })
 router.get('/redirect/:id/misskey', async (ctx, next) => {
+	console.log('misskeyRedirect')
 	const id = ctx.params.id
 	try {
 		const token = ctx.cookies.get('token')
@@ -220,7 +224,7 @@ router.post('/webhook', koaBody(), async (ctx, next) => {
 		const raw = await axios.post(
 			`https://api.github.com/repos/${repo}/issues/${id}/comments`,
 			{
-				body: `鯖缶認証(モデレータ以上): [Mastodon](${host}/pr/${id}) / [Misskey](${host}/pr/${id}/misskey)`,
+				body: `鯖缶認証(モデレータ以上): [Mastodon](${host}/pr/${id}/mastodon) / [Misskey](${host}/pr/${id}/misskey)`,
 			},
 			{
 				headers: {
